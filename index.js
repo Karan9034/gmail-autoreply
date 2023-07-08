@@ -74,7 +74,7 @@ const createLabel = async (gmail, labelName) => {
     });
     label = res.data;
   }
-  return label.id;
+  return label;
 }
 
 // Generates the raw email content to be sent as a reply.
@@ -111,7 +111,7 @@ Thanks.`;
 const autoReply = async (auth) => {
   if(!auth) throw err;
   let gmail = google.gmail({version: 'v1', auth});
-  let labelId = await createLabel(gmail, 'Vacation Email');
+  let label = await createLabel(gmail, 'Vacation Email');
 
   let res = await gmail.users.messages.list({
     userId: 'me',
@@ -140,11 +140,11 @@ const autoReply = async (auth) => {
             id: unreadMessage.threadId,
             requestBody: {
               removeLabelIds: ['INBOX'],
-              addLabelIds: [labelId],
+              addLabelIds: [label.id],
             },
           })
           console.log(`Replied to ${from}`)
-          console.log(`Added label ${labelId} to the thread ${unreadMessage.threadId}`)
+          console.log(`Added label ${label.name} to the thread ${unreadMessage.threadId}`)
         }
       })
     })
