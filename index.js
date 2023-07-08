@@ -127,11 +127,11 @@ const autoReply = async (auth) => {
         id: unreadMessage.threadId,
       }).then(async (thread) => {
         if(thread.data.messages.length === 1 && thread.data.messages[0].internalDate > PROCESS_START_TIMESTAMP){
-          let {email, from} = generateEmailContent(thread.data.messages[0])
+          let {encodedMessage, from} = generateEmailContent(thread.data.messages[0])
           await gmail.users.messages.send({
             userId: 'me',
             requestBody: {
-              raw: email,
+              raw: encodedMessage,
               threadId: unreadMessage.threadId,
             },
           })
