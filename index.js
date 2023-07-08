@@ -4,12 +4,17 @@ const process = require('process');
 const {authenticate} = require('@google-cloud/local-auth');
 const {google} = require('googleapis');
 
-const SCOPES = ['https://mail.google.com'];
-const TOKEN_PATH = path.join(process.cwd(), 'token.json');
+// Credentials for using the Gmail API. These are obtained from the Google Cloud Platform.
 const CREDENTIALS_PATH = path.join(process.cwd(), 'credentials.json');
+// The token.json file stores the user's access and refresh tokens, and is created automatically when the authorization flow completes for the first time.
+const TOKEN_PATH = path.join(process.cwd(), 'token.json');
+// Complete access to Gmail API. Specific scopes can be added as needed.
+const SCOPES = ['https://mail.google.com'];
 const PROCESS_START_TIMESTAMP = Date.now();
 
 
+
+// If OAuth has been used before and a token.json file exists, it is loaded and used to authenticate.
 const loadSavedCredentialsIfExist = async () => {
   try {
     const content = await fs.readFile(TOKEN_PATH);
@@ -19,6 +24,8 @@ const loadSavedCredentialsIfExist = async () => {
     return null;
   }
 }
+
+// Whenever OAuth is used, the credentials are saved back to the token.json file.
 const saveCredentials = async (client) => {
   const content = await fs.readFile(CREDENTIALS_PATH);
   const keys = JSON.parse(content);
@@ -31,6 +38,8 @@ const saveCredentials = async (client) => {
   });
   await fs.writeFile(TOKEN_PATH, payload);
 }
+
+// Calling OAuth to authenticate and save credentials.
 const authorize = async () => {
   let client = await loadSavedCredentialsIfExist();
   if (client) {
@@ -46,6 +55,8 @@ const authorize = async () => {
   return client;
 }
 
+
+// Creates a label if it doesn't exist.
 const createLabel = async (gmail, labelName) => {
   let res = await gmail.users.labels.list({
     userId: 'me',
@@ -65,6 +76,8 @@ const createLabel = async (gmail, labelName) => {
   }
   return label.id;
 }
+
+// Generates the raw email content to be sent as a reply.
 const generateEmailContent = (email) => {
   let from = ''
   let to = ''
@@ -74,6 +87,7 @@ const generateEmailContent = (email) => {
     if(header.name === 'To') to = header.value;
     if(header.name === 'Subject') subject = 'Re: ' + header.value;
   })
+
   let message = `From: ${to}
 To: ${from}
 Subject: ${subject}
@@ -90,9 +104,10 @@ Thanks.`;
     .replace(/\//g, '_')
     .replace(/=+$/, '');
   
-  return encodedMessage;
+  return {encodedMessage, from};
 }
 
+// Main function that checks for unread emails, sends a reply and adds a label.
 const autoReply = async (auth) => {
   if(!auth) throw err;
   let gmail = google.gmail({version: 'v1', auth});
@@ -112,7 +127,7 @@ const autoReply = async (auth) => {
         id: unreadMessage.threadId,
       }).then(async (thread) => {
         if(thread.data.messages.length === 1 && thread.data.messages[0].internalDate > PROCESS_START_TIMESTAMP){
-          let email = generateEmailContent(thread.data.messages[0])
+          let {email, from} = generateEmailContent(thread.data.messages[0])
           await gmail.users.messages.send({
             userId: 'me',
             requestBody: {
@@ -128,6 +143,8 @@ const autoReply = async (auth) => {
               addLabelIds: [labelId],
             },
           })
+          console.log(`Replied to ${from}`)
+          console.log(`Added label ${labelId} to the thread ${unreadMessage.threadId}`)
         }
       })
     })
@@ -137,6 +154,6 @@ const autoReply = async (auth) => {
 
 
 authorize().then((auth) => {
-  autoReply(auth);
+  console.log(`Process started at: ${PROCESS_START_TIMESTAMP}`)
   setInterval(() => autoReply(auth), Math.floor(45 + Math.random()*75) *1000)
 }).catch(console.error);
