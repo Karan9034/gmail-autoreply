@@ -19,5 +19,3 @@ This is a simple script that will automatically reply to emails that are sent to
 ## Scopes for Improvement
 
 1. The script could be modified to not reply to emails that contain `noreply` or `no-reply` in the sender's email address.
-
-2. If the user is added to an existing thread which he wasn't a part of, the script won't reply to that email. This could be fixed by checking if the user is a part of the thread or not by checking the receipents of each mail in the thread.
